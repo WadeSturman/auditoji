@@ -1,6 +1,6 @@
 # 🎧 Auditoji
 
-**Auditoji** It's 2025, and we're still reading reminders? Auditoji is a sound-based reminder assistant that helps you stay on track using personalized audio cues. Build small habits with auditory conditioning...give thoes pretty eyes a rest.
+**Auditoji** It's 2025, and we're still reading reminders? Auditoji is a sound-based reminder assistant that helps you stay on track using personalized audio cues. Build small habits with auditory conditioning...give those pretty eyes a rest.
 
 ## Features
 - Open it up, set up recurring reminders, hear a fun sound, form a habit.
