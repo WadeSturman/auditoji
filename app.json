@@ -33,6 +33,30 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/breathe.wav",
+            "./assets/sounds/brush_teeth.wav",
+            "./assets/sounds/caffiene_check.wav",
+            "./assets/sounds/call_your_father.wav",
+            "./assets/sounds/call_your_mom.wav",
+            "./assets/sounds/clean.wav",
+            "./assets/sounds/dogbark.wav",
+            "./assets/sounds/eat.wav",
+            "./assets/sounds/look_away_from_screen.wav",
+            "./assets/sounds/posture_check.wav",
+            "./assets/sounds/relax.wav",
+            "./assets/sounds/roll_your_shoulders.wav",
+            "./assets/sounds/short_walk.wav",
+            "./assets/sounds/stretch.wav",
+            "./assets/sounds/water.wav",
+            "./assets/sounds/write_down_one_thought.wav",
+            "./assets/sounds/catmeow.wav"
+          ]
+        }
       ]
     ],
     "experiments": {

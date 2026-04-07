@@ -1,0 +1,182 @@
+import { Audio } from 'expo-av';
+import soundLibrary from '../constants/sound-library';
+
+// Keyed by reminder.id → setTimeout return value.
+// Lives in module scope for the lifetime of the browser tab.
+const activeTimeouts = new Map();
+
+// document.hasFocus() is unreliable in some browsers/environments.
+// Track focus state explicitly via window events instead.
+let isTabFocused = true;
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => { isTabFocused = true; });
+  window.addEventListener('blur',  () => { isTabFocused = false; });
+}
+
+// --- Permissions ----------------------------------------------------------
+
+export async function requestPermissions() {
+  if (typeof Notification === 'undefined') return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+// --- Fire a reminder (sound + browser notification) -----------------------
+
+async function fireReminder(reminder) {
+  console.log('[Auditoji] fireReminder called', { id: reminder.id, message: reminder.message, notificationPermission: typeof Notification !== 'undefined' ? Notification.permission : 'unavailable' });
+  // Sound via expo-av. Works as long as the user has interacted with the page
+  // at least once (browser autoplay policy). Saving the reminder counts.
+  const entry = soundLibrary.find((s) => s.id === reminder.sound?.id);
+  if (entry) {
+    console.log('[Auditoji] playing sound:', entry.name);
+    try {
+      const { sound } = await Audio.Sound.createAsync(entry.uri);
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+      });
+    } catch (e) {
+      console.warn('[Auditoji] sound playback failed', e);
+    }
+  } else {
+    console.log('[Auditoji] no sound entry found for id:', reminder.sound?.id);
+  }
+
+  const tabFocused = isTabFocused;
+  console.log('[Auditoji] tab focused:', tabFocused);
+
+  if (tabFocused) {
+    // Chrome suppresses new Notification() when the tab is active. Show an
+    // in-app banner instead by dispatching a custom event that _layout.tsx hears.
+    console.log('[Auditoji] tab is focused — dispatching in-app banner instead of system notification');
+    window.dispatchEvent(new CustomEvent('auditoji-reminder', { detail: { message: reminder.message } }));
+  } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    console.log('[Auditoji] tab is backgrounded — showing system notification');
+    new Notification('Auditoji', { body: reminder.message });
+  } else {
+    console.log('[Auditoji] skipping notification — permission:', typeof Notification !== 'undefined' ? Notification.permission : 'API unavailable');
+  }
+}
+
+// --- Scheduling helpers ---------------------------------------------------
+
+// Returns milliseconds until the next time this reminder should fire,
+// or null if there are no upcoming occurrences.
+function msUntilNext(reminder) {
+  const start = new Date(reminder.startTime);
+  const hour = start.getHours();
+  const minute = start.getMinutes();
+  const now = Date.now();
+  console.log('[Auditoji] msUntilNext called', { id: reminder.id, frequency: reminder.frequency, startTime: reminder.startTime, endTime: reminder.endTime, intervalMinutes: reminder.intervalMinutes, parsedHour: hour, parsedMinute: minute });
+
+  if (reminder.frequency === 'Daily') {
+    const next = new Date();
+    next.setHours(hour, minute, 0, 0);
+    if (next.getTime() <= now) next.setDate(next.getDate() + 1);
+    const delay = next.getTime() - now;
+    console.log('[Auditoji] Daily — next fire at', next.toLocaleTimeString(), `(${Math.round(delay / 1000)}s from now)`);
+    return delay;
+  }
+
+  if (reminder.frequency === 'Weekly') {
+    const targetDay = start.getDay(); // 0 = Sunday
+    const next = new Date();
+    next.setHours(hour, minute, 0, 0);
+    let daysAhead = (targetDay - next.getDay() + 7) % 7;
+    if (daysAhead === 0 && next.getTime() <= now) daysAhead = 7;
+    next.setDate(next.getDate() + daysAhead);
+    const delay = next.getTime() - now;
+    console.log('[Auditoji] Weekly — next fire at', next.toLocaleString(), `(${Math.round(delay / 1000)}s from now)`);
+    return delay;
+  }
+
+  if (reminder.frequency === 'custom interval (minutes)') {
+    const end = new Date(reminder.endTime);
+    const intervalMs = parseInt(reminder.intervalMinutes, 10) * 60 * 1000;
+
+    for (let dayOffset = 0; dayOffset < 2; dayOffset++) {
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() + dayOffset);
+      windowStart.setHours(hour, minute, 0, 0);
+
+      const windowEnd = new Date(windowStart);
+      windowEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
+
+      console.log('[Auditoji] custom interval — checking window', windowStart.toLocaleTimeString(), '→', windowEnd.toLocaleTimeString(), `interval ${reminder.intervalMinutes}m`);
+
+      let cursor = windowStart.getTime();
+      while (cursor <= windowEnd.getTime()) {
+        if (cursor > now) {
+          const delay = cursor - now;
+          console.log('[Auditoji] custom interval — next fire at', new Date(cursor).toLocaleTimeString(), `(${Math.round(delay / 1000)}s from now)`);
+          return delay;
+        }
+        cursor += intervalMs;
+      }
+    }
+    console.log('[Auditoji] custom interval — no future slots found in the next 2 days');
+    return null;
+  }
+
+  console.log('[Auditoji] msUntilNext — unrecognised frequency:', reminder.frequency);
+  return null;
+}
+
+// Schedules the next timeout for a reminder and stores its ID.
+// After firing, re-calls itself so the reminder keeps repeating.
+function scheduleNext(reminder) {
+  const delay = msUntilNext(reminder);
+  if (delay === null) return;
+
+  const id = setTimeout(async () => {
+    await fireReminder(reminder);
+    scheduleNext(reminder); // chain to the next occurrence
+  }, delay);
+
+  activeTimeouts.set(reminder.id, id);
+}
+
+// --- Public API -----------------------------------------------------------
+
+// Returns [reminder.id] as the web "notification ID" — this is the key used
+// in activeTimeouts so cancelReminderNotifications can clear it.
+export async function scheduleReminder(reminder) {
+  console.log('[Auditoji] scheduleReminder called', { id: reminder.id, message: reminder.message, frequency: reminder.frequency, sound: reminder.sound?.name ?? 'none' });
+  const existing = activeTimeouts.get(reminder.id);
+  if (existing != null) clearTimeout(existing);
+  scheduleNext(reminder);
+  console.log('[Auditoji] activeTimeouts after schedule:', [...activeTimeouts.keys()]);
+  return [reminder.id];
+}
+
+export async function cancelReminderNotifications(ids = []) {
+  for (const id of ids) {
+    const timeoutId = activeTimeouts.get(id);
+    if (timeoutId != null) {
+      clearTimeout(timeoutId);
+      activeTimeouts.delete(id);
+    }
+  }
+}
+
+// On web, all scheduling is in-memory and lost on refresh, so reschedule
+// every reminder on mount (not just custom-interval ones like native does).
+export async function rescheduleCustomReminders(reminders) {
+  for (const reminder of reminders) {
+    const existing = activeTimeouts.get(reminder.id);
+    if (existing != null) clearTimeout(existing);
+    scheduleNext(reminder);
+  }
+  // Normalise notificationIds to the web format ([reminder.id]) so
+  // cancelReminderNotifications can find the right timeout on delete.
+  return reminders.map((r) => ({ ...r, notificationIds: [r.id] }));
+}
+
+// Sound is fired directly from the scheduler above; no separate foreground
+// listener is needed on web.
+export function setupForegroundListener() {
+  return () => {};
+}
