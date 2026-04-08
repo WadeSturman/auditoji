@@ -2,11 +2,7 @@ import React from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function MessageInput({ message, onChangeMessage, onSubmit }) {
-  const handlePress = () => {
-    if (message.trim()) {
-      console.log('Message confirmed:', message);
-    }
-  };
+  const handlePress = () => {};
   const [showConfirmation, setShowConfirmation] = React.useState(false);
 
 
