@@ -27,7 +27,7 @@ export default function RootLayout() {
         await sound.playAsync();
         sound.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync();
+            sound.unloadAsync().catch(() => {});
           }
         });
       } catch (e) {

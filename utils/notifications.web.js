@@ -34,7 +34,7 @@ async function fireReminder(reminder) {
       const { sound } = await Audio.Sound.createAsync(entry.uri);
       await sound.playAsync();
       sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+        if (status.isLoaded && status.didJustFinish) sound.unloadAsync().catch(() => {});
       });
     } catch (e) {
       console.warn('[Auditoji] sound playback failed', e);

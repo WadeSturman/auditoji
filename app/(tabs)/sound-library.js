@@ -25,13 +25,17 @@ export default function SoundLibraryScreen() {
 
 
   const playSound = async (uri) => {
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
+    try {
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      }
+      const { sound: newSound } = await Audio.Sound.createAsync(uri);
+      setSound(newSound);
+      await newSound.playAsync();
+    } catch (e) {
+      console.warn('Failed to play sound:', e);
     }
-    const { sound: newSound } = await Audio.Sound.createAsync(uri);
-    setSound(newSound);
-    await newSound.playAsync();
   };
 
   const groupedSounds = soundLibrary.reduce((groups, item) => {
