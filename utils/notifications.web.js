@@ -67,6 +67,17 @@ function msUntilNext(reminder) {
     return next.getTime() - now;
   }
 
+  if (reminder.frequency === 'Weekdays Only') {
+    const next = new Date();
+    next.setHours(hour, minute, 0, 0);
+    if (next.getTime() <= now) next.setDate(next.getDate() + 1);
+    // Advance past Saturday (6) and Sunday (0)
+    while (next.getDay() === 0 || next.getDay() === 6) {
+      next.setDate(next.getDate() + 1);
+    }
+    return next.getTime() - now;
+  }
+
   if (reminder.frequency === 'Weekly') {
     const targetDay = start.getDay(); // 0 = Sunday
     const next = new Date();
@@ -75,6 +86,31 @@ function msUntilNext(reminder) {
     if (daysAhead === 0 && next.getTime() <= now) daysAhead = 7;
     next.setDate(next.getDate() + daysAhead);
     return next.getTime() - now;
+  }
+
+  if (reminder.frequency === 'Weekdays Only - Interval') {
+    const end = new Date(reminder.endTime);
+    const intervalMs = parseInt(reminder.intervalMinutes, 10) * 60 * 1000;
+
+    // Check up to 7 days ahead so we always land on a weekday window.
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() + dayOffset);
+      const dow = windowStart.getDay();
+      if (dow === 0 || dow === 6) continue; // skip weekends
+
+      windowStart.setHours(hour, minute, 0, 0);
+
+      const windowEnd = new Date(windowStart);
+      windowEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
+
+      let cursor = windowStart.getTime();
+      while (cursor <= windowEnd.getTime()) {
+        if (cursor > now) return cursor - now;
+        cursor += intervalMs;
+      }
+    }
+    return null;
   }
 
   if (reminder.frequency === 'custom interval (minutes)') {

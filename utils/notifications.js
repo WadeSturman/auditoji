@@ -77,6 +77,21 @@ export async function scheduleReminder(reminder) {
     });
     notificationIds.push(id);
 
+  } else if (reminder.frequency === 'Weekdays Only') {
+    // Schedule one notification per weekday (Mon–Fri), each repeating weekly.
+    for (const weekday of [2, 3, 4, 5, 6]) { // Expo: 1=Sun, 2=Mon … 6=Fri, 7=Sat
+      const id = await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday,
+          hour,
+          minute,
+        },
+      });
+      notificationIds.push(id);
+    }
+
   } else if (reminder.frequency === 'Weekly') {
     // JS getDay() is 0–6 (Sun–Sat); Expo weekday is 1–7 (Sun–Sat)
     const weekday = startDate.getDay() + 1;
@@ -90,6 +105,33 @@ export async function scheduleReminder(reminder) {
       },
     });
     notificationIds.push(id);
+
+  } else if (reminder.frequency === 'Weekdays Only - Interval') {
+    const intervalMs = parseInt(reminder.intervalMinutes, 10) * 60 * 1000;
+    const endDate = new Date(reminder.endTime);
+    const endHour = endDate.getHours();
+    const endMinute = endDate.getMinutes();
+
+    // Schedule the next 7 days, skipping Saturday (0) and Sunday (6).
+    // This guarantees at least one full Mon–Fri window is always queued.
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const dayBase = new Date();
+      dayBase.setDate(dayBase.getDate() + dayOffset);
+      const dow = dayBase.getDay();
+      if (dow === 0 || dow === 6) continue; // skip weekends
+
+      const slots = getSlotsForDay(hour, minute, endHour, endMinute, intervalMs, dayBase);
+      for (const slot of slots) {
+        const id = await Notifications.scheduleNotificationAsync({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: slot,
+          },
+        });
+        notificationIds.push(id);
+      }
+    }
 
   } else if (reminder.frequency === 'custom interval (minutes)') {
     const intervalMs = parseInt(reminder.intervalMinutes, 10) * 60 * 1000;
@@ -139,7 +181,7 @@ export function setupForegroundListener(onNotification) {
 
 export async function rescheduleCustomReminders(reminders) {
   const customReminders = reminders.filter(
-    (r) => r.frequency === 'custom interval (minutes)'
+    (r) => r.frequency === 'custom interval (minutes)' || r.frequency === 'Weekdays Only - Interval'
   );
   if (customReminders.length === 0) return reminders;
 
