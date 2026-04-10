@@ -17,6 +17,7 @@ import MessageInput from './MessageInput';
 import SaveReminderButton from './SaveReminderButton';
 import TimePickerRow from './TimePickerRow';
 import AppHeader from './ui/AppHeader';
+import QuickStartTemplates from './QuickStartTemplates';
 
 export default function ReminderForm({ onSave }) {
   const [message, setMessage] = useState('');
@@ -39,6 +40,11 @@ export default function ReminderForm({ onSave }) {
       }
     }
     return null;
+  };
+
+  const handleTemplateSelect = (sound) => {
+    setMessage(sound.name);
+    setSelectedSound(sound);
   };
 
   const resetForm = () => {
@@ -93,6 +99,7 @@ export default function ReminderForm({ onSave }) {
           <AppHeader />
         </View>
         <View style={styles.divider} />
+        <QuickStartTemplates onSelect={handleTemplateSelect} />
         <Text style={styles.title}>Create a Reminder</Text>
 
         <MessageInput
