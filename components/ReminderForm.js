@@ -99,6 +99,24 @@ export default function ReminderForm({ onSave }) {
           <AppHeader />
         </View>
         <View style={styles.divider} />
+        <View style={styles.howItWorksBox}>
+          <Text style={styles.howItWorksTitle}>How it works</Text>
+          <View style={styles.howItWorksRow}>
+            {[
+              { label: '1', text: 'Choose a template or write a reminder' },
+              { label: '2', text: 'Set your start time, end time, and how often' },
+              { label: '3', text: 'Pick a sound — then save!' },
+              { label: '✓', text: "You're set!" },
+            ].map(({ label, text }) => (
+              <View key={label} style={styles.howItWorksCol}>
+                <View style={styles.howItWorksCircle}>
+                  <Text style={styles.howItWorksCircleText}>{label}</Text>
+                </View>
+                <Text style={styles.howItWorksStepText}>{text}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
         <QuickStartTemplates onSelect={handleTemplateSelect} />
         <Text style={styles.title}>Create a Reminder</Text>
 
@@ -247,6 +265,45 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
+  },
+  howItWorksBox: {
+    backgroundColor: '#F3EEFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  howItWorksTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#7B4FFF',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  howItWorksRow: {
+    flexDirection: 'row',
+  },
+  howItWorksCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  howItWorksCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#7B4FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  howItWorksCircleText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  howItWorksStepText: {
+    fontSize: 11,
+    color: '#555',
+    textAlign: 'center',
   },
   modalText: {
     textAlign: 'center',

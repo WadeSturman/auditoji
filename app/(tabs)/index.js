@@ -71,7 +71,7 @@ export default function ReminderScreen() {
             <ReminderListItem reminder={item} onDelete={handleDelete} />
           )}
           contentContainerStyle={[styles.container, { paddingBottom: 100 }]}
-          ListEmptyComponent={<Text style={styles.emptyText}>No reminders yet.</Text>}
+          ListEmptyComponent={<><Text style={styles.emptyText}>No reminders yet.</Text><Text style={styles.emptyHint}>Tap ✕ to delete a reminder</Text></>}
         />
       ) : (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -83,7 +83,7 @@ export default function ReminderScreen() {
               <ReminderListItem reminder={item} onDelete={handleDelete} />
             )}
             contentContainerStyle={[styles.container, { paddingBottom: 100 }]}
-            ListEmptyComponent={<Text style={styles.emptyText}>No reminders yet.</Text>}
+            ListEmptyComponent={<><Text style={styles.emptyText}>No reminders yet.</Text><Text style={styles.emptyHint}>Tap ✕ to delete a reminder</Text></>}
           />
         </TouchableWithoutFeedback>
       )}
@@ -101,5 +101,11 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     marginTop: 20,
+  },
+  emptyHint: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 4,
   },
 });
