@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import soundLibrary from '../constants/sound-library';
 
 // Keyed by reminder.id → setTimeout return value.
@@ -31,10 +31,13 @@ async function fireReminder(reminder) {
   const entry = soundLibrary.find((s) => s.id === reminder.sound?.id);
   if (entry) {
     try {
-      const { sound } = await Audio.Sound.createAsync(entry.uri);
-      await sound.playAsync();
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) sound.unloadAsync().catch(() => {});
+      const player = createAudioPlayer(entry.uri);
+      player.play();
+      const sub = player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          sub.remove();
+          player.remove();
+        }
       });
     } catch (e) {
       console.warn('[Auditoji] sound playback failed', e);

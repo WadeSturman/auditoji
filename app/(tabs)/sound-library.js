@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Touchable from '../../components/Touchable';
@@ -11,9 +11,7 @@ export default function SoundLibraryScreen() {
   const [expandedCategories, setExpandedCategories] = useState({});
 
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-    });
+    setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
   const toggleCategory = (category) => {
@@ -27,12 +25,11 @@ export default function SoundLibraryScreen() {
   const playSound = async (uri) => {
     try {
       if (sound) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
+        sound.remove();
       }
-      const { sound: newSound } = await Audio.Sound.createAsync(uri);
+      const newSound = createAudioPlayer(uri);
       setSound(newSound);
-      await newSound.playAsync();
+      newSound.play();
     } catch (e) {
       console.warn('Failed to play sound:', e);
     }

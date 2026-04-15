@@ -57,7 +57,8 @@
             "./assets/sounds/catmeow.wav"
           ]
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
